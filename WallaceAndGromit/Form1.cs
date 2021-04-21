@@ -29,13 +29,7 @@ namespace WallaceAndGromit
         private string extension = ".png";
         private PictureBox pictureBox = new PictureBox
         {
-            Location = new Point(50, 50),
-            SizeMode = PictureBoxSizeMode.StretchImage,
-            Size = new Size(192, 304)
-        };
-        private PictureBox pictureBox2 = new PictureBox
-        {
-            Location = new Point(300, 50),
+            Location = new Point(0, 0),
             SizeMode = PictureBoxSizeMode.StretchImage,
             Size = new Size(192, 304)
         };
@@ -52,9 +46,7 @@ namespace WallaceAndGromit
             InitializeComponent();
             wallaceImage = new Bitmap($"{partPathImage}_Right_{currentFrame}{extension}");
             pictureBox.Image = wallaceImage;
-            pictureBox2.Image = wallaceImage;
             Controls.Add(pictureBox);
-            Controls.Add(pictureBox2);
             timerAnimation.Tick += new EventHandler(UpdateAnimation);
             timerAnimation.Start();
             timerMovement.Tick += new EventHandler(UpdateMovement);
