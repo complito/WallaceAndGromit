@@ -26,6 +26,13 @@ namespace WallaceAndGromit
         private bool toUpdateAnimation = false;
         private Player wallace;
         private Map map;
+        private Label label = new Label
+        {
+            Size = new Size(150, 20),
+            Location = new Point(50, 50),
+            Text = "Press E to change location",
+            Visible = false
+        };
         private string partPathImage = "D:\\УрФУ\\ЯТП\\WallaceAndGromit\\WallaceAndGromit\\images\\";
         private string extension = ".png";
         private Timer timerAnimation = new Timer { Interval = 100 };
@@ -34,6 +41,7 @@ namespace WallaceAndGromit
         public Form1()
         {
             InitializeComponent();
+            Controls.Add(label);
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
@@ -82,27 +90,23 @@ namespace WallaceAndGromit
 
         private void UpdateMovement(object sender, EventArgs e)
         {
-                switch (wallace.currentAnimation)
-                {
-                    case AnimationDirection.Left:
-                        if (wallace.x > 64)
-                            wallace.Left();
-                        break;
-                    case AnimationDirection.Right:
-                        if (wallace.x + wallace.size.Width < 1216)
-                            wallace.Right();
-                        break;
-                    case AnimationDirection.Up:
-                        if (wallace.y > 64)
-                            wallace.Up();
-                        break;
-                    case AnimationDirection.Down:
-                        if (wallace.y + wallace.size.Height < 639)
-                            wallace.Down();
-                        break;
-                    default:
-                        return;
-                }
+            ChangeLabelVisible();
+            switch (wallace.currentAnimation)
+            {
+                case AnimationDirection.Left:
+                    if (wallace.x > 64) wallace.Left();
+                    break;
+                case AnimationDirection.Right:
+                    if (wallace.x + wallace.size.Width < 1216) wallace.Right();
+                    break;
+                case AnimationDirection.Up:
+                    if (wallace.y > 64) wallace.Up();
+                    break;
+                case AnimationDirection.Down:
+                    if (wallace.y + wallace.size.Height < 639) wallace.Down();
+                    break;
+                default: return;
+            }
             Invalidate();
         }
 
@@ -202,6 +206,24 @@ namespace WallaceAndGromit
                                 map.textureWidth, map.textureHeight);
                             break;
                     }
+        }
+
+        private void ChangeLabelVisible()
+        {
+            if ((wallace.y + wallace.size.Height / 2 > 64 * 4 && // left
+                wallace.y + wallace.size.Height / 2 < 64 * 6 &&
+                wallace.x < 64 + 50) ||
+                (wallace.y + wallace.size.Height / 2 > 64 * 4 && // right
+                wallace.y + wallace.size.Height / 2 < 64 * 6 &&
+                wallace.x + wallace.size.Width > 1280 - 64 - 50) ||
+                (wallace.y < 64 + 50 && // up
+                wallace.x + wallace.size.Width / 2 > 64 * 9 &&
+                wallace.x + wallace.size.Width / 2 < 64 * 11) ||
+                (wallace.y + wallace.size.Height > 639 - 50 && // down
+                wallace.x + wallace.size.Width / 2 > 64 * 9 &&
+                wallace.x + wallace.size.Width / 2 < 64 * 11))
+                label.Visible = true;
+            else label.Visible = false;
         }
     }
 }
