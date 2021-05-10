@@ -9,37 +9,37 @@ namespace WallaceAndGromit
 {
     class Player
     {
-        public int x, y;
-        public Size size;
-        public int currentFrame = 0;
-        public AnimationDirection currentAnimation = AnimationDirection.None;
-        public AnimationDirection previousAnimation = AnimationDirection.Right;
-        public int speed;
+        public int X, Y;
+        public Size Size;
+        public int CurrentFrame = 0;
+        public AnimationDirection CurrentAnimation = AnimationDirection.None;
+        public AnimationDirection PreviousAnimation = AnimationDirection.Right;
+        public int Speed;
         public Player(Size size, int x, int y, int speed)
         {
-            this.size = size;
-            this.x = x;
-            this.y = y;
-            this.speed = speed;
+            Size = size;
+            X = x;
+            Y = y;
+            Speed = speed;
         }
         public void Left()
         {
-            x -= speed;
+            X -= Speed;
         }
 
         public void Right()
         {
-            x += speed;
+            X += Speed;
         }
 
         public void Up()
         {
-            y -= speed;
+            Y -= Speed;
         }
 
         public void Down()
         {
-            y += speed;
+            Y += Speed;
         }
     }
 }

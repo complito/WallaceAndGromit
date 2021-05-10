@@ -9,20 +9,20 @@ namespace WallaceAndGromit
 {
     class Map
     {
-        public int[,] map;
-        public int textureWidth;
-        public int textureHeight;
-        public Image grassImage;
-        public Image wallImage;
+        public int[,] MapLayout;
+        public int TextureWidth;
+        public int TextureHeight;
+        public Image GrassImage;
+        public Image WallImage;
 
-        public Map(int[,] map, int textureWidth,
+        public Map(int[,] mapLayout, int textureWidth,
             int textureHeight, Image grassImage, Image wallImage)
         {
-            this.map = map;
-            this.textureWidth = textureWidth;
-            this.textureHeight = textureHeight;
-            this.grassImage = grassImage;
-            this.wallImage = wallImage;
+            MapLayout = mapLayout;
+            TextureWidth = textureWidth;
+            TextureHeight = textureHeight;
+            GrassImage = grassImage;
+            WallImage = wallImage;
         }
     }
 }
