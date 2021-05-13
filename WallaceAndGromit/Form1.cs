@@ -48,7 +48,7 @@ namespace WallaceAndGromit
         private string partPathImage = "D:\\УрФУ\\ЯТП\\WallaceAndGromit\\WallaceAndGromit\\images\\";
         private string extension = ".png";
         private Timer timerAnimation = new Timer { Interval = 100 };
-        private Timer timerMovement = new Timer { Interval = 10 };
+        private Timer timerMovement = new Timer { Interval = 1 };
 
         public Form1()
         {
@@ -69,8 +69,8 @@ namespace WallaceAndGromit
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-                { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                 { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -106,42 +106,36 @@ namespace WallaceAndGromit
             switch (wallace.CurrentAnimation)
             {
                 case AnimationDirection.Left:
-                    if (wallace.X > map.TextureWidth &&
-                        (currentLocation == LocationName.Initial || currentLocation == LocationName.Survival))
+                    if (wallace.X > map.TextureWidth)
                     {
                         wallace.Left();
-                        //cameraOffset.X += wallace.speed;
+                        if (currentLocation != LocationName.Initial &&
+                            currentLocation != LocationName.Survival && ToMoveByX())
+                            cameraOffset.X += wallace.Speed;
                     }
                     break;
                 case AnimationDirection.Right:
-                    if (wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 1) &&
-                        (currentLocation == LocationName.Initial || currentLocation == LocationName.Survival))
+                    if (wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 1))
                     {
                         wallace.Right();
-                        //cameraOffset.X -= wallace.speed;
+                        if (currentLocation != LocationName.Initial &&
+                            currentLocation != LocationName.Survival && ToMoveByX())
+                            cameraOffset.X -= wallace.Speed;
                     }
                     break;
                 case AnimationDirection.Up:
-                    if (wallace.Y > map.TextureWidth &&
-                        (currentLocation == LocationName.Initial || currentLocation == LocationName.Survival))
+                    if (wallace.Y > map.TextureWidth)
                     {
                         wallace.Up();
-                        if (currentLocation == LocationName.Survival &&
-                            wallace.Y >= map.TextureHeight * 4 &&
-                            wallace.Y + wallace.Size.Height <= map.TextureHeight * (map.MapLayout.GetLength(1) - 5) - 5)
+                        if (currentLocation != LocationName.Initial && ToMoveByY())
                             cameraOffset.Y += wallace.Speed;
                     }
                     break;
                 case AnimationDirection.Down:
-                    if (wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 1) &&
-                        currentLocation == LocationName.Initial)
-                        wallace.Down();
-                    else if (wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 1) - 5 &&
-                        currentLocation == LocationName.Survival)
+                    if (wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 1))
                     {
                         wallace.Down();
-                        if (wallace.Y >= map.TextureHeight * 4 &&
-                            wallace.Y + wallace.Size.Height <= map.TextureHeight * (map.MapLayout.GetLength(1) - 5) - 5)
+                        if (currentLocation != LocationName.Initial && ToMoveByY())
                             cameraOffset.Y -= wallace.Speed;
                     }
                     break;
@@ -264,14 +258,10 @@ namespace WallaceAndGromit
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
                     wallace.X + wallace.Size.Width > Width - map.TextureWidth - labelRange)
                     nextLocation = LocationName.Rescue;
-                else if (wallace.Y < map.TextureHeight + labelRange && // up
-                    wallace.X + wallace.Size.Width / 2 > map.TextureWidth * 9 &&
-                    wallace.X + wallace.Size.Width / 2 < map.TextureWidth * 11)
-                    nextLocation = LocationName.Search;
                 else if (wallace.Y + wallace.Size.Height > map.TextureHeight * (map.MapLayout.GetLength(1) - 1) - labelRange && // down
                     wallace.X + wallace.Size.Width / 2 > map.TextureWidth * 9 &&
                     wallace.X + wallace.Size.Width / 2 < map.TextureWidth * 11)
-                    nextLocation = LocationName.None;
+                    nextLocation = LocationName.Search;
                 else
                 {
                     label.Visible = false;
@@ -298,6 +288,24 @@ namespace WallaceAndGromit
                 }
                 label.Visible = true;
             }
+            else if (currentLocation == LocationName.Search)
+            {
+                if (wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 && // left
+                    wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
+                    wallace.X < map.TextureWidth + labelRange)
+                    nextLocation = LocationName.Survival;
+                else if (wallace.Y < map.TextureHeight + labelRange && // up
+                    wallace.X + wallace.Size.Width / 2 > map.TextureWidth * 4 &&
+                    wallace.X + wallace.Size.Width / 2 < map.TextureWidth * 6)
+                    nextLocation = LocationName.Initial;
+                else
+                {
+                    label.Visible = false;
+                    nextLocation = LocationName.None;
+                    return;
+                }
+                label.Visible = true;
+            }
         }
 
         private void ChangeLocation()
@@ -316,8 +324,8 @@ namespace WallaceAndGromit
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-                        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -334,11 +342,31 @@ namespace WallaceAndGromit
                             wallace.X = map.TextureWidth + wallace.Size.Width / 2;
                             wallace.Y = map.TextureHeight * 4;
                             break;
+                        case LocationName.Search:
+                            wallace.X = map.TextureWidth * 9;
+                            wallace.Y = map.TextureHeight * (map.MapLayout.GetLength(1) - 4) + wallace.Size.Height / 2;
+                            cameraOffset = new Point(0, 0);
+                            break;
+                        case LocationName.Rescue:
+
+                            break;
                     }
                     currentLocation = LocationName.Initial;
                     cameraOffset = new Point(0, 0);
                     break;
                 case LocationName.Survival:
+                    switch (currentLocation)
+                    {
+                        case LocationName.Initial:
+                            wallace.X = Width - map.TextureWidth - labelRange - wallace.Size.Width / 2;
+                            wallace.Y = map.TextureHeight * 4;
+                            break;
+                        case LocationName.Search:
+                            wallace.X = map.TextureWidth * 9;
+                            wallace.Y = map.TextureHeight * (map.MapLayout.GetLength(1) - 4) + wallace.Size.Height / 2;
+                            cameraOffset.Y -= map.TextureHeight * (map.MapLayout.GetLength(1) - 11);
+                            break;
+                    }
                     map.MapLayout = new int[,] // 0 - grass, 1 - wall
                     {
                         { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
@@ -362,22 +390,95 @@ namespace WallaceAndGromit
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                         { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
                     };
-                    switch (currentLocation)
-                    {
-                        case LocationName.Initial:
-                            wallace.X = Width - map.TextureWidth - labelRange - wallace.Size.Width / 2;
-                            wallace.Y = map.TextureHeight * 4;
-                            break;
-                    }
                     currentLocation = LocationName.Survival;
                     break;
                 case LocationName.Search:
+                    map.MapLayout = new int[,] // 0 - grass, 1 - wall
+                    {
+                        { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+                        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+                    };
+                    switch (currentLocation)
+                    {
+                        case LocationName.Initial:
+                            wallace.X = map.TextureWidth * 4;
+                            wallace.Y = map.TextureHeight + wallace.Size.Height / 2;
+                            break;
+                        case LocationName.Survival:
+                            wallace.X = map.TextureWidth + wallace.Size.Width / 2;
+                            wallace.Y = map.TextureHeight * 4;
+                            break;
+                        case LocationName.Rescue:
 
+                            break;
+                    }
+                    currentLocation = LocationName.Search;
+                    cameraOffset = new Point(0, 0);
                     break;
                 case LocationName.Rescue:
 
                     break;
             }
+        }
+
+        private bool ToMoveByY()
+        {
+            return wallace.Y > map.TextureHeight * 4 &&
+                wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 5);
+        }
+
+        public bool ToMoveByX()
+        {
+            return wallace.X > map.TextureWidth * 10 &&
+                wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 9);
         }
     }
 }

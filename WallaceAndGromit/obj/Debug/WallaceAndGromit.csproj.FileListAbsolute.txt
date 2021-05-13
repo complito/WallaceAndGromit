@@ -1,7 +1,6 @@
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\bin\Debug\WallaceAndGromit.exe.config
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\bin\Debug\WallaceAndGromit.exe
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\bin\Debug\WallaceAndGromit.pdb
-D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.csprojAssemblyReference.cache
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.Properties.Resources.resources
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.csproj.GenerateResource.cache
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.csproj.CoreCompileInputs.cache
