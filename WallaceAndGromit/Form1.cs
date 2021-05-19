@@ -33,10 +33,13 @@ namespace WallaceAndGromit
         private const int labelRange = 50;
         private bool isPressedAnyKey = false;
         private bool toUpdateAnimation = false;
+        private bool toUpdateAnimationBot = false;
         private LocationName currentLocation = LocationName.Initial;
         private LocationName nextLocation = LocationName.None;
         private Point cameraOffset = new Point(0, 0);
         private Player wallace;
+        private Player wallace2;
+        private int frameBot = 0;
         private Map map;
         private Label label = new Label
         {
@@ -58,6 +61,7 @@ namespace WallaceAndGromit
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
             wallace = new Player(new Size(63, 100), 577, 310, 6);
+            wallace2 = new Player(new Size(63, 100), 777, 500, 2);
             var mapLayout = new int[,] // 0 - grass, 1 - wall
             {
                 { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1},
@@ -98,48 +102,56 @@ namespace WallaceAndGromit
         private void UpdateAnimation(object sender, EventArgs e)
         {
             toUpdateAnimation = true;
+            toUpdateAnimationBot = true;
         }
 
         private void UpdateMovement(object sender, EventArgs e)
         {
-            ChangeLabelVisible();
-            switch (wallace.CurrentAnimation)
+            if (Collide())
             {
-                case AnimationDirection.Left:
-                    if (wallace.X > map.TextureWidth)
-                    {
-                        wallace.Left();
-                        if (currentLocation != LocationName.Initial &&
-                            currentLocation != LocationName.Survival && ToMoveByX())
-                            cameraOffset.X += wallace.Speed;
-                    }
-                    break;
-                case AnimationDirection.Right:
-                    if (wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 1))
-                    {
-                        wallace.Right();
-                        if (currentLocation != LocationName.Initial &&
-                            currentLocation != LocationName.Survival && ToMoveByX())
-                            cameraOffset.X -= wallace.Speed;
-                    }
-                    break;
-                case AnimationDirection.Up:
-                    if (wallace.Y > map.TextureWidth)
-                    {
-                        wallace.Up();
-                        if (currentLocation != LocationName.Initial && ToMoveByY())
-                            cameraOffset.Y += wallace.Speed;
-                    }
-                    break;
-                case AnimationDirection.Down:
-                    if (wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 1))
-                    {
-                        wallace.Down();
-                        if (currentLocation != LocationName.Initial && ToMoveByY())
-                            cameraOffset.Y -= wallace.Speed;
-                    }
-                    break;
-                default: return;
+                CatchUp();
+                ChangeLabelVisible();
+                switch (wallace.CurrentAnimation)
+                {
+                    case AnimationDirection.Left:
+                        if (wallace.X > map.TextureWidth)
+                        {
+                            wallace.Left();
+                            if (currentLocation != LocationName.Initial &&
+                                currentLocation != LocationName.Survival && ToMoveByX())
+                                cameraOffset.X += wallace.Speed;
+                        }
+                        break;
+                    case AnimationDirection.Right:
+                        if (wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 1))
+                        {
+                            wallace.Right();
+                            if (currentLocation != LocationName.Initial &&
+                                currentLocation != LocationName.Survival && ToMoveByX())
+                                cameraOffset.X -= wallace.Speed;
+                        }
+                        break;
+                    case AnimationDirection.Up:
+                        if (wallace.Y > map.TextureWidth)
+                        {
+                            wallace.Up();
+                            if (currentLocation != LocationName.Initial && ToMoveByY())
+                                cameraOffset.Y += wallace.Speed;
+                        }
+                        break;
+                    case AnimationDirection.Down:
+                        if (wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 1))
+                        {
+                            wallace.Down();
+                            if (currentLocation != LocationName.Initial && ToMoveByY())
+                                cameraOffset.Y -= wallace.Speed;
+                        }
+                        break;
+                }
+                if (Collide() != true)
+                {
+                    MessageBox.Show("Игра окончена");
+                }
             }
             Invalidate();
         }
@@ -185,6 +197,7 @@ namespace WallaceAndGromit
             Graphics gr = e.Graphics;
             CreateMap(gr);
             PlayAnimationMovement(gr);
+            PlayAnimationMovementBot(gr);
         }
 
         private void PlayAnimationMovement(Graphics gr)
@@ -227,6 +240,45 @@ namespace WallaceAndGromit
             var wallaceImage = new Bitmap($"{partPathImage}Wallace_{direction}_{wallace.CurrentFrame}{extension}");
             gr.DrawImage(wallaceImage, wallace.X + cameraOffset.X,
                 wallace.Y + cameraOffset.Y, wallace.Size.Width, wallace.Size.Height);
+        }
+
+        private void PlayAnimationMovementBot(Graphics gr)
+        {
+            if (toUpdateAnimationBot)
+            {
+                if (frameBot == 3) frameBot = -1;
+                ++frameBot;
+                toUpdateAnimationBot = false;
+            }
+            switch (wallace2.CurrentAnimation)
+            {
+                case AnimationDirection.Left:
+                    DrawImageBot(gr, "Left");
+                    break;
+                case AnimationDirection.Right:
+                    DrawImageBot(gr, "Right");
+                    break;
+                case AnimationDirection.Up:
+                    DrawLeftOrRightBot(gr);
+                    break;
+                case AnimationDirection.Down:
+                    DrawLeftOrRightBot(gr);
+                    break;
+            }
+            DrawLeftOrRightBot(gr);
+        }
+
+        private void DrawLeftOrRightBot(Graphics gr)
+        {
+            if (wallace2.PreviousAnimation == AnimationDirection.Left) DrawImageBot(gr, "Left");
+            else DrawImageBot(gr, "Right");
+        }
+
+        private void DrawImageBot(Graphics gr, string direction)
+        {
+            var wallaceImage = new Bitmap($"{partPathImage}Wallace_{direction}_{frameBot}{extension}");
+            gr.DrawImage(wallaceImage, wallace2.X + cameraOffset.X,
+                wallace2.Y + cameraOffset.Y, wallace2.Size.Width, wallace2.Size.Height);
         }
 
         private void CreateMap(Graphics gr)
@@ -569,6 +621,81 @@ namespace WallaceAndGromit
         {
             return wallace.X > map.TextureWidth * 10 &&
                 wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 9);
+        }
+
+        private bool Collide()
+        {
+            if (wallace2.Y <= wallace.Y + wallace.Size.Height && // down
+                wallace2.Y >= wallace.Y + wallace.Size.Height / 2 &&
+                wallace2.X + wallace2.Size.Width >= wallace.X &&
+                wallace2.X <= wallace.X + wallace.Size.Width)
+                return false;
+            if (wallace2.X + wallace2.Size.Width >= wallace.X && // left
+                wallace2.X + wallace2.Size.Width <= wallace.X + wallace.Size.Width / 2 &&
+                wallace2.Y + wallace2.Size.Height >= wallace.Y &&
+                wallace2.Y <= wallace.Y + wallace.Size.Height)
+                return false;
+            if (wallace2.Y + wallace2.Size.Height >= wallace.Y && // up
+                wallace2.Y + wallace2.Size.Height <= wallace.Y + wallace.Size.Height / 2 &&
+                wallace2.X + wallace2.Size.Width >= wallace.X &&
+                wallace2.X <= wallace.X + wallace.Size.Width)
+                return false;
+            if (wallace2.X <= wallace.X + wallace.Size.Width && // right
+                wallace2.X >= wallace.X + wallace.Size.Width / 2 &&
+                wallace2.Y + wallace2.Size.Height >= wallace.Y &&
+                wallace2.Y <= wallace.Y + wallace.Size.Height)
+                return false;
+            return true;
+        }
+
+        private void CatchUp()
+        {
+            bool isChangedY = false;
+            bool isChangedX = false;
+            if (wallace2.X == wallace.X)
+            {
+                if (wallace2.Y > wallace.Y) wallace2.Y -= wallace2.Speed;
+                else wallace2.Y += wallace2.Speed;
+                isChangedY = true;
+            }
+            else
+            {
+                if (wallace2.X > wallace.X)
+                {
+                    wallace2.X -= wallace2.Speed;
+                    wallace2.PreviousAnimation = AnimationDirection.Left;
+                }
+                else
+                {
+                    wallace2.X += wallace2.Speed;
+                    wallace2.PreviousAnimation = AnimationDirection.Right;
+                }
+                isChangedX = true;
+            }
+            if (wallace2.Y == wallace.Y)
+            {
+                if (!isChangedX)
+                {
+                    if (wallace2.X > wallace.X)
+                    {
+                        wallace2.X -= wallace2.Speed;
+                        wallace2.PreviousAnimation = AnimationDirection.Left;
+                    }
+                    else
+                    {
+                        wallace2.X += wallace2.Speed;
+                        wallace2.PreviousAnimation = AnimationDirection.Right;
+                    }
+                }
+            }
+            else
+            {
+                if (!isChangedY)
+                {
+                    if (wallace2.Y > wallace.Y) wallace2.Y -= wallace2.Speed;
+                    else wallace2.Y += wallace2.Speed;
+                }
+            }
         }
     }
 }
