@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 
 namespace WallaceAndGromit
 {
@@ -32,13 +33,17 @@ namespace WallaceAndGromit
     {
         private const int labelRange = 50;
         private bool isPressedAnyKey = false;
+        private bool isSurvivalPassed = false;
+        private bool isSearchPassed = false;
+        private bool isRescuePassed = false;
         private bool toUpdateAnimation = false;
         private bool toUpdateAnimationBot = false;
+        private LocationName previousLocation = LocationName.None;
         private LocationName currentLocation = LocationName.Initial;
         private LocationName nextLocation = LocationName.None;
         private Point cameraOffset = new Point(0, 0);
         private Player wallace;
-        private Player wallace2;
+        private List<Player> bots = new List<Player>();
         private int frameBot = 0;
         private Map map;
         private Label label = new Label
@@ -48,7 +53,13 @@ namespace WallaceAndGromit
             Text = "Press E to change location",
             Visible = false
         };
-        private string partPathImage = "D:\\УрФУ\\ЯТП\\WallaceAndGromit\\WallaceAndGromit\\images\\";
+        //private Label label2 = new Label
+        //{
+        //    Size = new Size(150, 20),
+        //    Location = new Point(200, 50),
+        //    Visible = true
+        //};
+        private string partPathImage = Path.GetFullPath("..\\..\\images\\");
         private string extension = ".png";
         private Timer timerAnimation = new Timer { Interval = 100 };
         private Timer timerMovement = new Timer { Interval = 1 };
@@ -57,11 +68,11 @@ namespace WallaceAndGromit
         {
             InitializeComponent();
             Controls.Add(label);
+            //Controls.Add(label2);
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
             wallace = new Player(new Size(63, 100), 577, 310, 6);
-            wallace2 = new Player(new Size(63, 100), 777, 500, 2);
             var mapLayout = new int[,] // 0 - grass, 1 - wall
             {
                 { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1},
@@ -102,12 +113,12 @@ namespace WallaceAndGromit
         private void UpdateAnimation(object sender, EventArgs e)
         {
             toUpdateAnimation = true;
-            toUpdateAnimationBot = true;
+            if (currentLocation == LocationName.Survival) toUpdateAnimationBot = true;
         }
 
         private void UpdateMovement(object sender, EventArgs e)
         {
-            if (Collide())
+            if (Collide(wallace))
             {
                 CatchUp();
                 ChangeLabelVisible();
@@ -148,10 +159,8 @@ namespace WallaceAndGromit
                         }
                         break;
                 }
-                if (Collide() != true)
-                {
+                if (!Collide(wallace))
                     MessageBox.Show("Игра окончена");
-                }
             }
             Invalidate();
         }
@@ -197,7 +206,7 @@ namespace WallaceAndGromit
             Graphics gr = e.Graphics;
             CreateMap(gr);
             PlayAnimationMovement(gr);
-            PlayAnimationMovementBot(gr);
+            if (currentLocation == LocationName.Survival) PlayAnimationMovementBot(gr);
         }
 
         private void PlayAnimationMovement(Graphics gr)
@@ -250,35 +259,24 @@ namespace WallaceAndGromit
                 ++frameBot;
                 toUpdateAnimationBot = false;
             }
-            switch (wallace2.CurrentAnimation)
-            {
-                case AnimationDirection.Left:
-                    DrawImageBot(gr, "Left");
-                    break;
-                case AnimationDirection.Right:
-                    DrawImageBot(gr, "Right");
-                    break;
-                case AnimationDirection.Up:
-                    DrawLeftOrRightBot(gr);
-                    break;
-                case AnimationDirection.Down:
-                    DrawLeftOrRightBot(gr);
-                    break;
-            }
-            DrawLeftOrRightBot(gr);
+            foreach (var bot in bots)
+                DrawLeftOrRightBot(gr, bot);
         }
 
-        private void DrawLeftOrRightBot(Graphics gr)
+        private void DrawLeftOrRightBot(Graphics gr, Player bot)
         {
-            if (wallace2.PreviousAnimation == AnimationDirection.Left) DrawImageBot(gr, "Left");
-            else DrawImageBot(gr, "Right");
+            if (bot.CurrentAnimation == AnimationDirection.Left) DrawBotImage(gr, "Left", bot);
+            else DrawBotImage(gr, "Right", bot);
         }
 
-        private void DrawImageBot(Graphics gr, string direction)
+        private void DrawBotImage(Graphics gr, string direction, Player bot)
         {
-            var wallaceImage = new Bitmap($"{partPathImage}Wallace_{direction}_{frameBot}{extension}");
-            gr.DrawImage(wallaceImage, wallace2.X + cameraOffset.X,
-                wallace2.Y + cameraOffset.Y, wallace2.Size.Width, wallace2.Size.Height);
+            Bitmap botImage;
+            if (currentLocation == LocationName.Survival)
+                botImage = new Bitmap($"{partPathImage}Penguin_{direction}_{frameBot}{extension}");
+            else botImage = new Bitmap($"{partPathImage}Wallace_{direction}_{frameBot}{extension}");
+            gr.DrawImage(botImage, bot.X + cameraOffset.X,
+                bot.Y + cameraOffset.Y, bot.Size.Width, bot.Size.Height);
         }
 
         private void CreateMap(Graphics gr)
@@ -413,8 +411,11 @@ namespace WallaceAndGromit
                     switch (currentLocation)
                     {
                         case LocationName.Survival:
+                            if (previousLocation == LocationName.Search && !isSurvivalPassed)
+                                isSurvivalPassed = true;
                             wallace.X = map.TextureWidth + wallace.Size.Width / 2;
                             wallace.Y = map.TextureHeight * 4;
+                            bots.Clear();
                             break;
                         case LocationName.Search:
                             wallace.X = map.TextureWidth * 9;
@@ -432,10 +433,12 @@ namespace WallaceAndGromit
                     switch (currentLocation)
                     {
                         case LocationName.Initial:
+                            previousLocation = LocationName.Initial;
                             wallace.X = Width - map.TextureWidth - labelRange - wallace.Size.Width / 2;
                             wallace.Y = map.TextureHeight * 4;
                             break;
                         case LocationName.Search:
+                            previousLocation = LocationName.Search;
                             wallace.X = map.TextureWidth * 9;
                             wallace.Y = map.TextureHeight * (map.MapLayout.GetLength(1) - 4) + wallace.Size.Height / 2;
                             cameraOffset.Y = -map.TextureHeight * (map.MapLayout.GetLength(1) - 11);
@@ -464,6 +467,19 @@ namespace WallaceAndGromit
                         { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
                         { 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
                     };
+                    if ((currentLocation == LocationName.Initial || currentLocation == LocationName.Search) && !isSurvivalPassed)
+                    {
+                        var rnd = new Random();
+                        bool isFirst3Positions = false;
+                        var i = map.TextureHeight + 10;
+                        var shift = 13;
+                        if (i == map.TextureHeight + 10 || i == (map.TextureHeight + 10) * shift || i == (map.TextureHeight + 10) * shift * 2)
+                            isFirst3Positions = true;
+                        for (; i < map.TextureHeight * (map.MapLayout.GetLength(1) + 20); i += map.TextureHeight * shift)
+                            bots.Add(new Player(new Size(100, 132),
+                                rnd.Next(map.TextureWidth + 10,
+                                map.TextureWidth * (map.MapLayout.GetLength(0) - (isFirst3Positions ? 5 : 1)) - 10), i, 2));
+                    }
                     currentLocation = LocationName.Survival;
                     break;
                 case LocationName.Search:
@@ -527,8 +543,11 @@ namespace WallaceAndGromit
                             wallace.Y = map.TextureHeight + wallace.Size.Height / 2;
                             break;
                         case LocationName.Survival:
+                            if (previousLocation == LocationName.Initial && !isSurvivalPassed)
+                                isSurvivalPassed = true;
                             wallace.X = map.TextureWidth + wallace.Size.Width / 2;
                             wallace.Y = map.TextureHeight * 4;
+                            bots.Clear();
                             break;
                         case LocationName.Rescue:
                             wallace.X = map.TextureWidth * (map.MapLayout.GetLength(0) - 3) + wallace.Size.Width / 2;
@@ -623,77 +642,99 @@ namespace WallaceAndGromit
                 wallace.X + wallace.Size.Width < map.TextureWidth * (map.MapLayout.GetLength(0) - 9);
         }
 
-        private bool Collide()
+        private bool Collide(Player player)
         {
-            if (wallace2.Y <= wallace.Y + wallace.Size.Height && // down
-                wallace2.Y >= wallace.Y + wallace.Size.Height / 2 &&
-                wallace2.X + wallace2.Size.Width >= wallace.X &&
-                wallace2.X <= wallace.X + wallace.Size.Width)
-                return false;
-            if (wallace2.X + wallace2.Size.Width >= wallace.X && // left
-                wallace2.X + wallace2.Size.Width <= wallace.X + wallace.Size.Width / 2 &&
-                wallace2.Y + wallace2.Size.Height >= wallace.Y &&
-                wallace2.Y <= wallace.Y + wallace.Size.Height)
-                return false;
-            if (wallace2.Y + wallace2.Size.Height >= wallace.Y && // up
-                wallace2.Y + wallace2.Size.Height <= wallace.Y + wallace.Size.Height / 2 &&
-                wallace2.X + wallace2.Size.Width >= wallace.X &&
-                wallace2.X <= wallace.X + wallace.Size.Width)
-                return false;
-            if (wallace2.X <= wallace.X + wallace.Size.Width && // right
-                wallace2.X >= wallace.X + wallace.Size.Width / 2 &&
-                wallace2.Y + wallace2.Size.Height >= wallace.Y &&
-                wallace2.Y <= wallace.Y + wallace.Size.Height)
-                return false;
+            foreach (var bot in bots)
+            {
+                if (bot.Y <= player.Y + player.Size.Height && // down
+                    bot.Y >= player.Y + player.Size.Height / 2 &&
+                    bot.X + bot.Size.Width >= player.X &&
+                    bot.X <= player.X + player.Size.Width)
+                    return false;
+                if (bot.X + bot.Size.Width >= player.X && // left
+                    bot.X + bot.Size.Width <= player.X + player.Size.Width / 2 &&
+                    bot.Y + bot.Size.Height >= player.Y &&
+                    bot.Y <= player.Y + player.Size.Height)
+                    return false;
+                if (bot.Y + bot.Size.Height >= player.Y && // up
+                    bot.Y + bot.Size.Height <= player.Y + player.Size.Height / 2 &&
+                    bot.X + bot.Size.Width >= player.X &&
+                    bot.X <= player.X + player.Size.Width)
+                    return false;
+                if (bot.X <= player.X + player.Size.Width && // right
+                    bot.X >= player.X + player.Size.Width / 2 &&
+                    bot.Y + bot.Size.Height >= player.Y &&
+                    bot.Y <= player.Y + player.Size.Height)
+                    return false;
+            }
             return true;
         }
 
         private void CatchUp()
         {
-            bool isChangedY = false;
-            bool isChangedX = false;
-            if (wallace2.X == wallace.X)
+            //bool toMoveBot = true;
+            for (var i = 0; i < bots.Count; ++i)
             {
-                if (wallace2.Y > wallace.Y) wallace2.Y -= wallace2.Speed;
-                else wallace2.Y += wallace2.Speed;
-                isChangedY = true;
-            }
-            else
-            {
-                if (wallace2.X > wallace.X)
+                //for (var j = 0; j < bots.Count; ++j)
+                //{
+                //    if (j == i) continue;
+                //    toMoveBot = Collide(bots[j]);
+                //}
+                bool isChangedY = false;
+                bool isChangedX = false;
+                if (bots[i].X == wallace.X)
                 {
-                    wallace2.X -= wallace2.Speed;
-                    wallace2.PreviousAnimation = AnimationDirection.Left;
+                    if (bots[i].Y > wallace.Y/* && toMoveBot*/)
+                        bots[i].Y -= bots[i].Speed;
+                    else if (bots[i].Y < wallace.Y/* && toMoveBot*/)
+                        bots[i].Y += bots[i].Speed;
+                    isChangedY = true;
                 }
                 else
                 {
-                    wallace2.X += wallace2.Speed;
-                    wallace2.PreviousAnimation = AnimationDirection.Right;
-                }
-                isChangedX = true;
-            }
-            if (wallace2.Y == wallace.Y)
-            {
-                if (!isChangedX)
-                {
-                    if (wallace2.X > wallace.X)
+                    if (bots[i].X > wallace.X/* && toMoveBot*/)
                     {
-                        wallace2.X -= wallace2.Speed;
-                        wallace2.PreviousAnimation = AnimationDirection.Left;
+                        bots[i].X -= bots[i].Speed;
+                        bots[i].CurrentAnimation = AnimationDirection.Left;
                     }
-                    else
+                    else if (bots[i].X < wallace.X/* && toMoveBot*/)
                     {
-                        wallace2.X += wallace2.Speed;
-                        wallace2.PreviousAnimation = AnimationDirection.Right;
+                        bots[i].X += bots[i].Speed;
+                        bots[i].CurrentAnimation = AnimationDirection.Right;
+                    }
+                    isChangedX = true;
+                }
+                if (bots[i].Y == wallace.Y)
+                {
+                    //toMoveBot = true;
+                    //for (var j = 0; j < bots.Count; ++j)
+                    //{
+                    //    if (j == i) continue;
+                    //    toMoveBot = Collide(bots[j]);
+                    //}
+                    if (!isChangedX)
+                    {
+                        if (bots[i].X > wallace.X/* && toMoveBot*/)
+                        {
+                            bots[i].X -= bots[i].Speed;
+                            bots[i].CurrentAnimation = AnimationDirection.Left;
+                        }
+                        else if (bots[i].X < wallace.X/* && toMoveBot*/)
+                        {
+                            bots[i].X += bots[i].Speed;
+                            bots[i].CurrentAnimation = AnimationDirection.Right;
+                        }
                     }
                 }
-            }
-            else
-            {
-                if (!isChangedY)
+                else
                 {
-                    if (wallace2.Y > wallace.Y) wallace2.Y -= wallace2.Speed;
-                    else wallace2.Y += wallace2.Speed;
+                    if (!isChangedY)
+                    {
+                        if (bots[i].Y > wallace.Y/* && toMoveBot*/)
+                            bots[i].Y -= bots[i].Speed;
+                        else if (bots[i].Y < wallace.Y/* && toMoveBot*/)
+                            bots[i].Y += bots[i].Speed;
+                    }
                 }
             }
         }
