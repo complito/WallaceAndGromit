@@ -459,6 +459,7 @@ namespace WallaceAndGromit
                             previousLocation = LocationName.Initial;
                             wallace.X = Width - map.TextureWidth - labelRange - wallace.Size.Width / 2;
                             wallace.Y = map.TextureHeight * 4;
+                            cameraOffset = new Point(0, 0);
                             break;
                         case LocationName.Search:
                             previousLocation = LocationName.Search;
