@@ -45,6 +45,7 @@ namespace WallaceAndGromit
         private Player wallace;
         private List<Player> bots = new List<Player>();
         private int frameBot = 0;
+        private int life = 3;
         private Map map;
         private Label label = new Label
         {
@@ -160,7 +161,29 @@ namespace WallaceAndGromit
                         break;
                 }
                 if (!Collide(wallace))
-                    MessageBox.Show("Игра окончена");
+                {
+                    --life;
+                    var messageEnd = life == 2 ? "жизни" : "жизнь";
+                    if (life > 0)
+                    {
+                        MessageBox.Show(
+                            $"У тебя осталось {life} {messageEnd}",
+                            "Пингвин не хочет тебя отпускать");
+                        if (previousLocation == LocationName.Initial)
+                            currentLocation = LocationName.Initial;
+                        else if (previousLocation == LocationName.Search)
+                            currentLocation = LocationName.Search;
+                        nextLocation = LocationName.Survival;
+                        ChangeLocation();
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            $"Игра окончена!",
+                            "Пингвины тебя больше не отпустят");
+                    }
+                }
+                    //MessageBox.Show("Игра окончена");
             }
             Invalidate();
         }
@@ -469,6 +492,7 @@ namespace WallaceAndGromit
                     };
                     if ((currentLocation == LocationName.Initial || currentLocation == LocationName.Search) && !isSurvivalPassed)
                     {
+                        bots.Clear();
                         var rnd = new Random();
                         bool isFirst3Positions = false;
                         var y = map.TextureHeight + 10;
@@ -480,9 +504,8 @@ namespace WallaceAndGromit
                             var x = rnd.Next(map.TextureWidth + 10,
                                 map.TextureWidth * (map.MapLayout.GetLength(0) - (isFirst3Positions ? 5 : 1)) - 10);
                             if ((x % 2 == 0 && previousLocation == LocationName.Initial) ||
-                                x % 2 != 0 && previousLocation == LocationName.Search) ++x;
+                                (x % 2 != 0 && previousLocation == LocationName.Search)) ++x;
                             bots.Add(new Player(new Size(39 + 24, 66 + 24), x, y, 2));
-                            
                         }
                             
                     }
