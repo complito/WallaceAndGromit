@@ -471,14 +471,20 @@ namespace WallaceAndGromit
                     {
                         var rnd = new Random();
                         bool isFirst3Positions = false;
-                        var i = map.TextureHeight + 10;
-                        var shift = 13;
-                        if (i == map.TextureHeight + 10 || i == (map.TextureHeight + 10) * shift || i == (map.TextureHeight + 10) * shift * 2)
+                        var y = map.TextureHeight + 10;
+                        var shift = 8;
+                        if (y == map.TextureHeight + 10 || y == (map.TextureHeight + 10) * shift || y == (map.TextureHeight + 10) * shift * 2)
                             isFirst3Positions = true;
-                        for (; i < map.TextureHeight * (map.MapLayout.GetLength(1) + 20); i += map.TextureHeight * shift)
-                            bots.Add(new Player(new Size(39 + 24, 66 + 24),
-                                rnd.Next(map.TextureWidth + 10,
-                                map.TextureWidth * (map.MapLayout.GetLength(0) - (isFirst3Positions ? 5 : 1)) - 10), i, 2));
+                        for (; y < map.TextureHeight * (map.MapLayout.GetLength(1) - 5); y += map.TextureHeight * shift)
+                        {
+                            var x = rnd.Next(map.TextureWidth + 10,
+                                map.TextureWidth * (map.MapLayout.GetLength(0) - (isFirst3Positions ? 5 : 1)) - 10);
+                            if ((x % 2 == 0 && previousLocation == LocationName.Initial) ||
+                                x % 2 != 0 && previousLocation == LocationName.Search) ++x;
+                            bots.Add(new Player(new Size(39 + 24, 66 + 24), x, y, 2));
+                            
+                        }
+                            
                     }
                     currentLocation = LocationName.Survival;
                     break;
