@@ -476,7 +476,7 @@ namespace WallaceAndGromit
                         if (i == map.TextureHeight + 10 || i == (map.TextureHeight + 10) * shift || i == (map.TextureHeight + 10) * shift * 2)
                             isFirst3Positions = true;
                         for (; i < map.TextureHeight * (map.MapLayout.GetLength(1) + 20); i += map.TextureHeight * shift)
-                            bots.Add(new Player(new Size(100, 132),
+                            bots.Add(new Player(new Size(39 + 24, 66 + 24),
                                 rnd.Next(map.TextureWidth + 10,
                                 map.TextureWidth * (map.MapLayout.GetLength(0) - (isFirst3Positions ? 5 : 1)) - 10), i, 2));
                     }
