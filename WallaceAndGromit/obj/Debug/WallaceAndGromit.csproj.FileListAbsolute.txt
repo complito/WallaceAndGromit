@@ -7,4 +7,3 @@ D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.exe
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.pdb
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.Form1.resources
-D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.csprojAssemblyReference.cache

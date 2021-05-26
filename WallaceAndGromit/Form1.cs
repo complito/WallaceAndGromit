@@ -141,7 +141,7 @@ namespace WallaceAndGromit
         private void UpdateAnimation(object sender, EventArgs e)
         {
             toUpdateAnimation = true;
-            if (currentLocation == LocationName.Survival) toUpdateAnimationBot = true;
+            toUpdateAnimationBot = true;
         }
 
         private void UpdateMovement(object sender, EventArgs e)
@@ -275,8 +275,8 @@ namespace WallaceAndGromit
             Graphics gr = e.Graphics;
             CreateMap(gr);
             PlayAnimationMovement(gr);
-            if (currentLocation == LocationName.Survival) PlayAnimationMovementBot(gr);
-            else if (currentLocation == LocationName.Search) DrawItems(gr);
+            PlayAnimationMovementBot(gr);
+            DrawItems(gr);
         }
 
         private void NearToItems()
@@ -369,9 +369,7 @@ namespace WallaceAndGromit
         private void DrawBotImage(Graphics gr, string direction, Player bot)
         {
             Bitmap botImage;
-            if (currentLocation == LocationName.Survival)
-                botImage = new Bitmap($"{partPathImage}Penguin_{direction}_{frameBot}{extension}");
-            else botImage = new Bitmap($"{partPathImage}Wallace_{direction}_{frameBot}{extension}");
+            botImage = new Bitmap($"{partPathImage}Penguin_{direction}_{frameBot}{extension}");
             gr.DrawImage(botImage, bot.X + cameraOffset.X,
                 bot.Y + cameraOffset.Y, bot.Size.Width, bot.Size.Height);
         }
@@ -486,6 +484,7 @@ namespace WallaceAndGromit
             switch (nextLocation)
             {
                 case LocationName.Initial:
+                    labelForTimeLeft.Visible = false;
                     timerForSearch.Stop();
                     map.MapLayout = new int[,] // 0 - grass, 1 - wall
                     {
@@ -532,6 +531,7 @@ namespace WallaceAndGromit
                     cameraOffset = new Point(0, 0);
                     break;
                 case LocationName.Survival:
+                    labelForTimeLeft.Visible = false;
                     timerForSearch.Stop();
                     switch (currentLocation)
                     {
@@ -587,7 +587,6 @@ namespace WallaceAndGromit
                                 (x % 2 != 0 && previousLocation == LocationName.Search)) ++x;
                             bots.Add(new Player(new Size(39 + 24, 66 + 24), x, y, 2));
                         }
-                            
                     }
                     currentLocation = LocationName.Survival;
                     break;
@@ -799,32 +798,26 @@ namespace WallaceAndGromit
 
         private void CatchUp()
         {
-            //bool toMoveBot = true;
             for (var i = 0; i < bots.Count; ++i)
             {
-                //for (var j = 0; j < bots.Count; ++j)
-                //{
-                //    if (j == i) continue;
-                //    toMoveBot = Collide(bots[j]);
-                //}
                 bool isChangedY = false;
                 bool isChangedX = false;
                 if (bots[i].X == wallace.X)
                 {
-                    if (bots[i].Y > wallace.Y/* && toMoveBot*/)
+                    if (bots[i].Y > wallace.Y)
                         bots[i].Y -= bots[i].Speed;
-                    else if (bots[i].Y < wallace.Y/* && toMoveBot*/)
+                    else if (bots[i].Y < wallace.Y)
                         bots[i].Y += bots[i].Speed;
                     isChangedY = true;
                 }
                 else
                 {
-                    if (bots[i].X > wallace.X/* && toMoveBot*/)
+                    if (bots[i].X > wallace.X)
                     {
                         bots[i].X -= bots[i].Speed;
                         bots[i].CurrentAnimation = AnimationDirection.Left;
                     }
-                    else if (bots[i].X < wallace.X/* && toMoveBot*/)
+                    else if (bots[i].X < wallace.X)
                     {
                         bots[i].X += bots[i].Speed;
                         bots[i].CurrentAnimation = AnimationDirection.Right;
@@ -833,20 +826,15 @@ namespace WallaceAndGromit
                 }
                 if (bots[i].Y == wallace.Y)
                 {
-                    //toMoveBot = true;
-                    //for (var j = 0; j < bots.Count; ++j)
-                    //{
-                    //    if (j == i) continue;
-                    //    toMoveBot = Collide(bots[j]);
-                    //}
+
                     if (!isChangedX)
                     {
-                        if (bots[i].X > wallace.X/* && toMoveBot*/)
+                        if (bots[i].X > wallace.X)
                         {
                             bots[i].X -= bots[i].Speed;
                             bots[i].CurrentAnimation = AnimationDirection.Left;
                         }
-                        else if (bots[i].X < wallace.X/* && toMoveBot*/)
+                        else if (bots[i].X < wallace.X)
                         {
                             bots[i].X += bots[i].Speed;
                             bots[i].CurrentAnimation = AnimationDirection.Right;
@@ -857,9 +845,9 @@ namespace WallaceAndGromit
                 {
                     if (!isChangedY)
                     {
-                        if (bots[i].Y > wallace.Y/* && toMoveBot*/)
+                        if (bots[i].Y > wallace.Y)
                             bots[i].Y -= bots[i].Speed;
-                        else if (bots[i].Y < wallace.Y/* && toMoveBot*/)
+                        else if (bots[i].Y < wallace.Y)
                             bots[i].Y += bots[i].Speed;
                     }
                 }
