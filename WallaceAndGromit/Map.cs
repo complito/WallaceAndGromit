@@ -14,15 +14,17 @@ namespace WallaceAndGromit
         public int TextureHeight;
         public Image GrassImage;
         public Image WallImage;
+        public Image GrassWithPointImage;
 
         public Map(int[,] mapLayout, int textureWidth,
-            int textureHeight, Image grassImage, Image wallImage)
+            int textureHeight, Image grassImage, Image wallImage, Image grassWithPointImage)
         {
             MapLayout = mapLayout;
             TextureWidth = textureWidth;
             TextureHeight = textureHeight;
             GrassImage = grassImage;
             WallImage = wallImage;
+            GrassWithPointImage = grassWithPointImage;
         }
     }
 }

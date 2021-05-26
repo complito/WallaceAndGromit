@@ -12,12 +12,14 @@ namespace WallaceAndGromit
         public int X;
         public int Y;
         public Bitmap Image;
+        public Point PointOnMap;
 
-        public Item(int x, int y, Bitmap image)
+        public Item(int x, int y, Bitmap image, Point pointOnMap)
         {
             X = x;
             Y = y;
             Image = image;
+            PointOnMap = pointOnMap;
         }
     }
 }

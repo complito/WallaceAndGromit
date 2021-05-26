@@ -41,6 +41,7 @@ namespace WallaceAndGromit
         private bool toUpdateAnimation = false;
         private bool toUpdateAnimationBot = false;
         private bool isLifeWasted = false;
+        private bool isAbilityUsed = false;
         private LocationName previousLocation = LocationName.None;
         private LocationName currentLocation = LocationName.Initial;
         private LocationName nextLocation = LocationName.None;
@@ -76,6 +77,13 @@ namespace WallaceAndGromit
             Text = $"Осталось времени: 30",
             Visible = false
         };
+        private Label labelForAbility = new Label
+        {
+            Size = new Size(400, 15),
+            Location = new Point(50, 100),
+            Text = "Нажмите латинскую клавишу \"E\", чтобы узнать, где одна из частей ключа",
+            Visible = false
+        };
         private string partPathImage = Path.GetFullPath("..\\..\\images\\");
         private string extension = ".png";
         private Timer timerAnimation = new Timer { Interval = 100 };
@@ -88,6 +96,7 @@ namespace WallaceAndGromit
             Controls.Add(labelToChangeLocation);
             Controls.Add(labelToTakeItem);
             Controls.Add(labelForTimeLeft);
+            Controls.Add(labelForAbility);
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
@@ -95,7 +104,8 @@ namespace WallaceAndGromit
             var mapLayout = mapLayouts.initialLayout;
             var grassImage = new Bitmap($"{partPathImage}Grass{extension}");
             var wallImage = new Bitmap($"{partPathImage}Wall{extension}");
-            map = new Map(mapLayout, 64, 64, grassImage, wallImage);
+            var grassWithPointImage = new Bitmap($"{partPathImage}Grass_With_Point{extension}");
+            map = new Map(mapLayout, 64, 64, grassImage, wallImage, grassWithPointImage);
 
             timerAnimation.Tick += new EventHandler(UpdateAnimation);
             timerAnimation.Start();
@@ -231,11 +241,67 @@ namespace WallaceAndGromit
                             labelForTimeLeft.Visible = false;
                         }
                     }
+                    else if (currentLocation == LocationName.Search && !isAbilityUsed)
+                    {
+                        isAbilityUsed = true;
+                        //labelForAbility.Visible = false;
+                        var start = new Point(wallace.X / map.TextureWidth, wallace.Y / map.TextureHeight);
+                        var queue = new Queue<Point>();
+                        queue.Enqueue(start);
+                        var visitedPoints = new HashSet<Point>() { start };
+                        var pathsFromKeyPartsToWallace = new Dictionary<Point, SinglyLinkedList<Point>>
+                        {
+                            { start, new SinglyLinkedList<Point>(start) }
+                        };
+
+                        FindPaths(queue, map, visitedPoints, pathsFromKeyPartsToWallace);
+
+                        foreach (var item in items)
+                            if (pathsFromKeyPartsToWallace.ContainsKey(item.PointOnMap))
+                            {
+                                MarkTheWay(pathsFromKeyPartsToWallace[item.PointOnMap]);
+                                return;
+                            }
+                    }
                     return;
                 default:
                     return;
             }
             isPressedAnyKey = true;
+        }
+
+        private void MarkTheWay(SinglyLinkedList<Point> pathsFromKeyPartsToWallace)
+        {
+            var previous = pathsFromKeyPartsToWallace;
+            while (previous != null)
+            {
+                map.MapLayout[previous.Value.X, previous.Value.Y] = 2;
+                previous = previous.Previous;
+            }
+        }
+
+        private void FindPaths(Queue<Point> queue, Map map, HashSet<Point> visitedPoints,
+            Dictionary<Point, SinglyLinkedList<Point>> pathsFromKeyPartsToWallace)
+        {
+            while (queue.Count != 0)
+            {
+                var point = queue.Dequeue();
+                if (point.X < 1 || point.X > map.MapLayout.GetLength(0) - 3 ||
+                    point.Y < 1 || point.Y > map.MapLayout.GetLength(1) - 3) continue;
+
+                for (var dy = -1; dy <= 1; ++dy)
+                    for (var dx = -1; dx <= 1; ++dx)
+                    {
+                        //if (dx != 0 && dy != 0) continue; если нужны пути без диагонали - расскоментируй
+                        var nextPoint = new Point { X = point.X + dx, Y = point.Y + dy };
+                        if (visitedPoints.Contains(nextPoint)) continue;
+
+                        queue.Enqueue(nextPoint);
+                        visitedPoints.Add(nextPoint);
+                        pathsFromKeyPartsToWallace.Add(nextPoint,
+                            new SinglyLinkedList<Point>(nextPoint, pathsFromKeyPartsToWallace[point]));
+                    }
+            }
         }
 
         private void FreeKey(object sender, KeyEventArgs e)
@@ -367,6 +433,10 @@ namespace WallaceAndGromit
                             gr.DrawImage(map.WallImage, i * map.TextureWidth + cameraOffset.X,
                                 j * map.TextureWidth + cameraOffset.Y, map.TextureWidth, map.TextureHeight);
                             break;
+                        case 2: // grass with point
+                            gr.DrawImage(map.GrassWithPointImage, i * map.TextureWidth + cameraOffset.X,
+                                j * map.TextureWidth + cameraOffset.Y, map.TextureWidth, map.TextureHeight);
+                            break;
                     }
         }
 
@@ -415,6 +485,8 @@ namespace WallaceAndGromit
             else if (currentLocation == LocationName.Search)
             {
                 if (!isSearchPassed) labelForTimeLeft.Visible = true;
+                if (!isAbilityUsed && !isSearchPassed && !labelToTakeItem.Visible) labelForAbility.Visible = true;
+                else labelForAbility.Visible = false;
                 if (wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 && // left
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
                     wallace.X < map.TextureWidth + labelRange)
@@ -426,7 +498,7 @@ namespace WallaceAndGromit
                 else if (wallace.X + wallace.Size.Width > map.TextureWidth * (map.MapLayout.GetLength(0) - 1) - labelRange && // right
                     wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 &&
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
-                    isSearchPassed)
+                    (isSearchPassed || isRescuePassed))
                     nextLocation = LocationName.Rescue;
                 else
                 {
@@ -440,7 +512,8 @@ namespace WallaceAndGromit
             {
                 if (wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 && // left
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
-                    wallace.X < map.TextureWidth + labelRange)
+                    wallace.X < map.TextureWidth + labelRange &&
+                    (isRescuePassed || isSearchPassed))
                     nextLocation = LocationName.Search;
                 else if (wallace.Y < map.TextureHeight + labelRange && // up
                     wallace.X + wallace.Size.Width / 2 > map.TextureWidth * 4 &&
@@ -465,6 +538,7 @@ namespace WallaceAndGromit
                 case LocationName.Initial:
                     labelForTimeLeft.Visible = false;
                     timerForSearch.Stop();
+                    items.Clear();
                     map.MapLayout = mapLayouts.initialLayout;
                     switch (currentLocation)
                     {
@@ -490,6 +564,7 @@ namespace WallaceAndGromit
                 case LocationName.Survival:
                     labelForTimeLeft.Visible = false;
                     timerForSearch.Stop();
+                    items.Clear();
                     switch (currentLocation)
                     {
                         case LocationName.Initial:
@@ -526,7 +601,11 @@ namespace WallaceAndGromit
                     currentLocation = LocationName.Survival;
                     break;
                 case LocationName.Search:
-                    map.MapLayout = mapLayouts.searchLayout;
+                    map.MapLayout = new int[mapLayouts.searchLayout.GetLength(0), mapLayouts.searchLayout.GetLength(1)];
+                    for (var x = 0; x < mapLayouts.searchLayout.GetLength(0); ++x)
+                        for (var y = 0; y < mapLayouts.searchLayout.GetLength(1); ++y)
+                            map.MapLayout[x, y] = mapLayouts.searchLayout[x, y];
+                    isAbilityUsed = false;
                     switch (currentLocation)
                     {
                         case LocationName.Initial:
@@ -562,13 +641,15 @@ namespace WallaceAndGromit
                         {
                             var x = rnd.Next(map.TextureWidth + 10, map.TextureWidth * (map.MapLayout.GetLength(0) - 2) - 10);
                             var y = rnd.Next(map.TextureHeight + 10, map.TextureHeight * (map.MapLayout.GetLength(1) - 2) - 10);
-                            items.Add(new Item(x, y, new Bitmap($"{partPathImage}Key_{i}{extension}")));
+                            items.Add(new Item(x, y, new Bitmap($"{partPathImage}Key_{i}{extension}"),
+                                new Point(x / map.TextureWidth, y / map.TextureHeight)));
                         }
                     }
                     currentLocation = LocationName.Search;
                     break;
                 case LocationName.Rescue:
                     timerForSearch.Stop();
+                    items.Clear();
                     map.MapLayout = mapLayouts.rescueLayout;
                     switch (currentLocation)
                     {
