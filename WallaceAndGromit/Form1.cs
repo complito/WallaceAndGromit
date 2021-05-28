@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Media;
 
 namespace WallaceAndGromit
 {
@@ -26,6 +27,7 @@ namespace WallaceAndGromit
         Survival,
         Search,
         Rescue,
+        GamePassed,
         None
     }
 
@@ -37,7 +39,6 @@ namespace WallaceAndGromit
         private bool isSurvivalPassed = false;
         private bool isSearchPassed = false;
         private bool isRescuePassed = false;
-        private bool isNearToItem = false;
         private bool toUpdateAnimation = false;
         private bool toUpdateAnimationBot = false;
         private bool isLifeWasted = false;
@@ -47,6 +48,7 @@ namespace WallaceAndGromit
         private LocationName nextLocation = LocationName.None;
         private MapLayouts mapLayouts = new MapLayouts();
         private Point cameraOffset = new Point(0, 0);
+        private Point initialWallaceLocation = new Point(1280 / 2 - 63 / 2, 720 / 2 - 100 / 2);
         private Player wallace;
         private List<Player> bots = new List<Player>();
         private List<Item> items = new List<Item>();
@@ -54,33 +56,53 @@ namespace WallaceAndGromit
         private int life = 3;
         private int nearItemIndex;
         private int numberOfCollectedItems = 0;
-        private int timeLeft = 30;
+        private const int time = 40;
+        private int timeLeft;
         private Map map;
+        private string pathToMusic = Path.GetFullPath("..\\..\\") + "Dee Yan-Key - ragtop.wav";
+        private WMPLib.WindowsMediaPlayer WMP = new WMPLib.WindowsMediaPlayer();
+        private Point[] pointsToMovePandas = new Point[]
+        {
+            new Point(100, 100),
+            new Point(300, 100),
+            new Point(500, 100)
+        };
         private Label labelToChangeLocation = new Label
         {
-            Size = new Size(320, 15),
-            Location = new Point(50, 50),
+            Location = new Point(10, 10),
             Text = "Нажмите латинскую клавишу \"E\", чтобы изменить локацию",
+            BackColor = Color.Transparent,
+            AutoSize = true,
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
             Visible = false
         };
         private Label labelToTakeItem = new Label
         {
-            Size = new Size(330, 15),
-            Location = new Point(600, 50),
+            BackColor = Color.Transparent,
+            AutoSize = true,
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            Location = new Point(10, 10),
             Text = "Нажми латинскую клавишу \"E\", чтобы подобрать часть ключа",
             Visible = false
         };
         private Label labelForTimeLeft = new Label
         {
-            Size = new Size(125, 15),
-            Location = new Point(1100, 50),
-            Text = $"Осталось времени: 30",
+            BackColor = Color.Transparent,
+            AutoSize = true,
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            Location = new Point(1025, 10),
             Visible = false
         };
         private Label labelForAbility = new Label
         {
-            Size = new Size(400, 15),
-            Location = new Point(50, 100),
+            BackColor = Color.Transparent,
+            AutoSize = true,
+            ForeColor = Color.White,
+            Font = new Font("Arial", 14, FontStyle.Bold),
+            Location = new Point(10, 10),
             Text = "Нажмите латинскую клавишу \"E\", чтобы узнать, где одна из частей ключа",
             Visible = false
         };
@@ -93,6 +115,12 @@ namespace WallaceAndGromit
         public Form1()
         {
             InitializeComponent();
+            timeLeft = time;
+            labelForTimeLeft.Text = $"Осталось времени: {timeLeft}";
+            WMP.URL = pathToMusic;
+            WMP.settings.volume = 100;
+            WMP.settings.autoStart = true;
+            WMP.controls.play();
             Controls.Add(labelToChangeLocation);
             Controls.Add(labelToTakeItem);
             Controls.Add(labelForTimeLeft);
@@ -100,8 +128,8 @@ namespace WallaceAndGromit
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
-            wallace = new Player(new Size(63, 100), 577, 310, 6);
-            var mapLayout = mapLayouts.initialLayout;
+            wallace = new Player(new Size(63, 100), initialWallaceLocation.X, initialWallaceLocation.Y, 6);
+            var mapLayout = mapLayouts.InitialLayout;
             var grassImage = new Bitmap($"{partPathImage}Grass{extension}");
             var wallImage = new Bitmap($"{partPathImage}Wall{extension}");
             var grassWithPointImage = new Bitmap($"{partPathImage}Grass_With_Point{extension}");
@@ -120,7 +148,8 @@ namespace WallaceAndGromit
 
         private void ReduceTime(object sender, EventArgs e)
         {
-            if (timeLeft > 0 && !isSearchPassed)
+            if (timeLeft > 0 && ((currentLocation == LocationName.Search && !isSearchPassed) ||
+               (currentLocation == LocationName.Rescue && !isRescuePassed)))
             {
                 --timeLeft;
                 labelForTimeLeft.Text = "Осталось времени: " + Convert.ToString(timeLeft);
@@ -131,11 +160,29 @@ namespace WallaceAndGromit
         {
             toUpdateAnimation = true;
             toUpdateAnimationBot = true;
+            UpdatePandaAnimation();
+        }
+
+        private void UpdatePandaAnimation()
+        {
+            for (var i = 0; i < items.Count; ++i)
+            {
+                if (items[i].CurrentFrame == 3) items[i].CurrentFrame = -1;
+                ++items[i].CurrentFrame;
+                if ((items[i].X == pointsToMovePandas[i].X && items[i].Y == pointsToMovePandas[i].Y) ||
+                    !items[i].IsRescued)
+                    items[i].CurrentFrame = 0;
+            }
         }
 
         private void UpdateMovement(object sender, EventArgs e)
         {
-            if (Collide(wallace) && timeLeft != 0)
+            if (isSurvivalPassed && isSearchPassed && isRescuePassed && currentLocation == LocationName.Rescue)
+            {
+                map.MapLayout[map.MapLayout.GetLength(0) - 1, 4] = 0;
+                map.MapLayout[map.MapLayout.GetLength(0) - 1, 5] = 0;
+            }
+            if (Collide(wallace) && timeLeft > 0)
             {
                 CatchUp();
                 NearToItems();
@@ -147,7 +194,9 @@ namespace WallaceAndGromit
                         {
                             wallace.Left();
                             if (currentLocation != LocationName.Initial &&
-                                currentLocation != LocationName.Survival && ToMoveByX())
+                                currentLocation != LocationName.Survival &&
+                                currentLocation != LocationName.GamePassed &&
+                                ToMoveByX())
                                 cameraOffset.X += wallace.Speed;
                         }
                         break;
@@ -156,7 +205,9 @@ namespace WallaceAndGromit
                         {
                             wallace.Right();
                             if (currentLocation != LocationName.Initial &&
-                                currentLocation != LocationName.Survival && ToMoveByX())
+                                currentLocation != LocationName.Survival &&
+                                currentLocation != LocationName.GamePassed &&
+                                ToMoveByX())
                                 cameraOffset.X -= wallace.Speed;
                         }
                         break;
@@ -164,7 +215,9 @@ namespace WallaceAndGromit
                         if (wallace.Y > map.TextureWidth)
                         {
                             wallace.Up();
-                            if (currentLocation != LocationName.Initial && ToMoveByY())
+                            if (currentLocation != LocationName.Initial &&
+                                currentLocation != LocationName.GamePassed &&
+                                ToMoveByY())
                                 cameraOffset.Y += wallace.Speed;
                         }
                         break;
@@ -172,7 +225,9 @@ namespace WallaceAndGromit
                         if (wallace.Y + wallace.Size.Height < map.TextureHeight * (map.MapLayout.GetLength(1) - 1))
                         {
                             wallace.Down();
-                            if (currentLocation != LocationName.Initial && ToMoveByY())
+                            if (currentLocation != LocationName.Initial &&
+                                currentLocation != LocationName.GamePassed &&
+                                ToMoveByY())
                                 cameraOffset.Y -= wallace.Speed;
                         }
                         break;
@@ -200,13 +255,21 @@ namespace WallaceAndGromit
                         else if (previousLocation == LocationName.Survival) currentLocation = LocationName.Survival;
                         nextLocation = LocationName.Search;
                     }
+                    else if (currentLocation == LocationName.Rescue)
+                    {
+                        messageTitle = "Время истекло!";
+                        if (previousLocation == LocationName.Initial) currentLocation = LocationName.Initial;
+                        else if (previousLocation == LocationName.Search) currentLocation = LocationName.Search;
+                        nextLocation = LocationName.Rescue;
+                    }
                     MessageBox.Show($"У тебя осталось {life} {messageEnd}", messageTitle);
                     ChangeLocation();
                 }
                 else
                 {
                     if (currentLocation == LocationName.Survival) messageTitle = "Пингвины тебя больше не отпустят";
-                    else if (currentLocation == LocationName.Search) messageTitle = "Время истекло!";
+                    else if (currentLocation == LocationName.Search || currentLocation == LocationName.Rescue)
+                        messageTitle = "Время истекло!";
                     MessageBox.Show($"Игра окончена!", messageTitle);
                 }
             }
@@ -230,21 +293,27 @@ namespace WallaceAndGromit
                     wallace.CurrentAnimation = AnimationDirection.Down;
                     break;
                 case "E":
-                    if (labelToChangeLocation.Visible && nextLocation != LocationName.None) ChangeLocation();
-                    else if (currentLocation == LocationName.Search && labelToTakeItem.Visible)
+                    if (labelToChangeLocation.Visible && nextLocation != LocationName.None)
                     {
-                        items.Remove(items[nearItemIndex]);
+                        ChangeLocation();
+                        if (currentLocation == LocationName.GamePassed) MessageBox.Show("Игра пройдена!");
+                    }
+                    else if ((currentLocation == LocationName.Search || currentLocation == LocationName.Rescue) &&
+                        labelToTakeItem.Visible)
+                    {
+                        if (currentLocation == LocationName.Search) items.Remove(items[nearItemIndex]);
+                        else items[nearItemIndex].IsRescued = true;
                         ++numberOfCollectedItems;
                         if (numberOfCollectedItems == itemsNumber)
                         {
-                            isSearchPassed = true;
+                            if (currentLocation == LocationName.Search) isSearchPassed = true;
+                            else isRescuePassed = true;
                             labelForTimeLeft.Visible = false;
                         }
                     }
                     else if (currentLocation == LocationName.Search && !isAbilityUsed)
                     {
                         isAbilityUsed = true;
-                        //labelForAbility.Visible = false;
                         var start = new Point(wallace.X / map.TextureWidth, wallace.Y / map.TextureHeight);
                         var queue = new Queue<Point>();
                         queue.Enqueue(start);
@@ -336,7 +405,7 @@ namespace WallaceAndGromit
                     wallace.Y < items[i].Y + items[i].Image.Size.Height + 50)
                     isNear = true;
             }
-            if (isNear)
+            if (isNear && !items[i - 1].IsRescued)
             {
                 labelToTakeItem.Visible = true;
                 nearItemIndex = i - 1;
@@ -346,9 +415,14 @@ namespace WallaceAndGromit
 
         private void DrawItems(Graphics gr)
         {
-            foreach (var item in items)
-                gr.DrawImage(item.Image, item.X + cameraOffset.X,
-                    item.Y + cameraOffset.Y, item.Image.Size.Width, item.Image.Size.Height);
+            for (var i = 0; i < items.Count; ++i)
+            {
+                var image = items[i].Image;
+                if (items[i].IsRescued) image = new Bitmap(
+                    $"{partPathImage}Panda_{items[i].CurrentAnimation}_{items[i].CurrentFrame}{extension}");
+                gr.DrawImage(image, items[i].X + cameraOffset.X,
+                    items[i].Y + cameraOffset.Y, items[i].Image.Size.Width, items[i].Image.Size.Height);
+            }
         }
 
         private void PlayAnimationMovement(Graphics gr)
@@ -485,8 +559,6 @@ namespace WallaceAndGromit
             else if (currentLocation == LocationName.Search)
             {
                 if (!isSearchPassed) labelForTimeLeft.Visible = true;
-                if (!isAbilityUsed && !isSearchPassed && !labelToTakeItem.Visible) labelForAbility.Visible = true;
-                else labelForAbility.Visible = false;
                 if (wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 && // left
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
                     wallace.X < map.TextureWidth + labelRange)
@@ -495,21 +567,26 @@ namespace WallaceAndGromit
                     wallace.X + wallace.Size.Width / 2 > map.TextureWidth * 4 &&
                     wallace.X + wallace.Size.Width / 2 < map.TextureWidth * 6)
                     nextLocation = LocationName.Initial;
-                else if (wallace.X + wallace.Size.Width > map.TextureWidth * (map.MapLayout.GetLength(0) - 1) - labelRange && // right
+                else if (wallace.X + wallace.Size.Width >map.TextureWidth * (map.MapLayout.GetLength(0) - 1) - labelRange && // right
                     wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 &&
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
                     (isSearchPassed || isRescuePassed))
                     nextLocation = LocationName.Rescue;
                 else
                 {
+                    if (!isAbilityUsed && !isSearchPassed && !labelToTakeItem.Visible)
+                        labelForAbility.Visible = true;
+                    else labelForAbility.Visible = false;
                     labelToChangeLocation.Visible = false;
                     nextLocation = LocationName.None;
                     return;
                 }
+                labelForAbility.Visible = false;
                 labelToChangeLocation.Visible = true;
             }
             else if (currentLocation == LocationName.Rescue)
             {
+                if (!isRescuePassed) labelForTimeLeft.Visible = true;
                 if (wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 && // left
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
                     wallace.X < map.TextureWidth + labelRange &&
@@ -519,6 +596,11 @@ namespace WallaceAndGromit
                     wallace.X + wallace.Size.Width / 2 > map.TextureWidth * 4 &&
                     wallace.X + wallace.Size.Width / 2 < map.TextureWidth * 6)
                     nextLocation = LocationName.Initial;
+                else if (wallace.X + wallace.Size.Width > map.TextureWidth * (map.MapLayout.GetLength(0) - 1) - labelRange && // right
+                    wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 &&
+                    wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
+                    isRescuePassed)
+                    nextLocation = LocationName.GamePassed;
                 else
                 {
                     labelToChangeLocation.Visible = false;
@@ -539,7 +621,7 @@ namespace WallaceAndGromit
                     labelForTimeLeft.Visible = false;
                     timerForSearch.Stop();
                     items.Clear();
-                    map.MapLayout = mapLayouts.initialLayout;
+                    map.MapLayout = mapLayouts.InitialLayout;
                     switch (currentLocation)
                     {
                         case LocationName.Survival:
@@ -580,7 +662,7 @@ namespace WallaceAndGromit
                             cameraOffset.Y = -map.TextureHeight * (map.MapLayout.GetLength(1) - 11);
                             break;
                     }
-                    map.MapLayout = mapLayouts.survivalLayout;
+                    map.MapLayout = mapLayouts.SurvivalLayout;
                     if ((currentLocation == LocationName.Initial || currentLocation == LocationName.Search) && !isSurvivalPassed)
                     {
                         bots.Clear();
@@ -601,10 +683,11 @@ namespace WallaceAndGromit
                     currentLocation = LocationName.Survival;
                     break;
                 case LocationName.Search:
-                    map.MapLayout = new int[mapLayouts.searchLayout.GetLength(0), mapLayouts.searchLayout.GetLength(1)];
-                    for (var x = 0; x < mapLayouts.searchLayout.GetLength(0); ++x)
-                        for (var y = 0; y < mapLayouts.searchLayout.GetLength(1); ++y)
-                            map.MapLayout[x, y] = mapLayouts.searchLayout[x, y];
+                    labelToTakeItem.Text = "Нажми латинскую клавишу \"E\", чтобы подобрать часть ключа";
+                    map.MapLayout = new int[mapLayouts.SearchLayout.GetLength(0), mapLayouts.SearchLayout.GetLength(1)];
+                    for (var x = 0; x < mapLayouts.SearchLayout.GetLength(0); ++x)
+                        for (var y = 0; y < mapLayouts.SearchLayout.GetLength(1); ++y)
+                            map.MapLayout[x, y] = mapLayouts.SearchLayout[x, y];
                     isAbilityUsed = false;
                     switch (currentLocation)
                     {
@@ -630,41 +713,77 @@ namespace WallaceAndGromit
                     if (currentLocation == LocationName.Rescue)
                         cameraOffset = new Point(-map.TextureHeight * (map.MapLayout.GetLength(0) - 20), 0);
                     else cameraOffset = new Point(0, 0);
-                    numberOfCollectedItems = 0;
-                    timeLeft = 30;
-                    labelForTimeLeft.Text = $"Осталось времени: {timeLeft}";
-                    timerForSearch.Start();
-                    if (!isSearchPassed)
-                    {
-                        items.Clear();
-                        for (var i = 0; i < itemsNumber; ++i)
-                        {
-                            var x = rnd.Next(map.TextureWidth + 10, map.TextureWidth * (map.MapLayout.GetLength(0) - 2) - 10);
-                            var y = rnd.Next(map.TextureHeight + 10, map.TextureHeight * (map.MapLayout.GetLength(1) - 2) - 10);
-                            items.Add(new Item(x, y, new Bitmap($"{partPathImage}Key_{i}{extension}"),
-                                new Point(x / map.TextureWidth, y / map.TextureHeight)));
-                        }
-                    }
                     currentLocation = LocationName.Search;
+                    if (!isSearchPassed) InitializeLocation(rnd, "Key_");
                     break;
                 case LocationName.Rescue:
-                    timerForSearch.Stop();
                     items.Clear();
-                    map.MapLayout = mapLayouts.rescueLayout;
+                    labelToTakeItem.Text = "Нажмите латинскую клавишу \"E\", чтобы спасти панду";
+                    map.MapLayout = mapLayouts.RescueLayout;
+                    if (isRescuePassed)
+                    {
+                        map.MapLayout[map.MapLayout.GetLength(0) - 1, 4] = 0;
+                        map.MapLayout[map.MapLayout.GetLength(0) - 1, 5] = 0;
+                    }
                     switch (currentLocation)
                     {
                         case LocationName.Initial:
+                            previousLocation = LocationName.Initial;
                             wallace.X = map.TextureWidth * 4;
                             wallace.Y = map.TextureHeight + wallace.Size.Height / 2;
                             break;
                         case LocationName.Search:
+                            previousLocation = LocationName.Search;
                             wallace.X = map.TextureWidth + wallace.Size.Width / 2;
                             wallace.Y = map.TextureHeight * 4;
                             break;
                     }
                     currentLocation = LocationName.Rescue;
                     cameraOffset = new Point(0, 0);
+                    if (!isRescuePassed) InitializeLocation(rnd, "Panda_Right_0");
+                    else for (var i = 0; i < itemsNumber; ++i)
+                        {
+                            var x = pointsToMovePandas[i].X;
+                            var y = pointsToMovePandas[i].Y;
+                            items.Add(new Item(x, y, new Bitmap($"{partPathImage}Panda_Left_0{extension}"),
+                                new Point(x / map.TextureWidth, y / map.TextureHeight)));
+                            items[i].IsRescued = true;
+                            items[i].CurrentAnimation = AnimationDirection.Left;
+                        }
                     break;
+                case LocationName.GamePassed:
+                    items.Clear();
+                    map.MapLayout = mapLayouts.GamePassed;
+                    wallace.X = initialWallaceLocation.X;
+                    wallace.Y = initialWallaceLocation.Y;
+                    cameraOffset = new Point(0, 0);
+                    currentLocation = LocationName.GamePassed;
+                    labelToChangeLocation.Visible = false;
+                    break;
+            }
+        }
+
+        private void InitializeLocation(Random rnd, string imageName)
+        {
+            numberOfCollectedItems = 0;
+            timeLeft = time;
+            labelForTimeLeft.Text = $"Осталось времени: {timeLeft}";
+            timerForSearch.Start();
+            items.Clear();
+            Bitmap image;
+            for (var i = 0; i < itemsNumber; ++i)
+            {
+                if (currentLocation == LocationName.Search)
+                    image = new Bitmap($"{partPathImage}{imageName}{i}{extension}");
+                else image = new Bitmap($"{partPathImage}{imageName}{extension}");
+                var x = rnd.Next(map.TextureWidth + 10, map.TextureWidth * (map.MapLayout.GetLength(0) - 2) - 10);
+                var y = rnd.Next(map.TextureHeight + 10, map.TextureHeight * (map.MapLayout.GetLength(1) - 2) - 10);
+                if (currentLocation == LocationName.Rescue)
+                {
+                    if (x % 2 != 0) ++x;
+                    if (y % 2 != 0) ++y;
+                }
+                items.Add(new Item(x, y, image, new Point(x / map.TextureWidth, y / map.TextureHeight)));
             }
         }
 
@@ -710,46 +829,94 @@ namespace WallaceAndGromit
 
         private void CatchUp()
         {
-            for (var i = 0; i < bots.Count; ++i)
+            var steps = currentLocation == LocationName.Survival ? bots.Count : items.Count;
+            for (var i = 0; i < steps; ++i)
             {
                 bool isChangedY = false;
                 bool isChangedX = false;
-                if (bots[i].X == wallace.X)
+                if ((currentLocation == LocationName.Survival && bots[i].X == wallace.X) ||
+                    (currentLocation == LocationName.Rescue && items[i].IsRescued && items[i].X == pointsToMovePandas[i].X))
                 {
-                    if (bots[i].Y > wallace.Y)
-                        bots[i].Y -= bots[i].Speed;
-                    else if (bots[i].Y < wallace.Y)
-                        bots[i].Y += bots[i].Speed;
+                    if ((currentLocation == LocationName.Survival && bots[i].Y > wallace.Y) ||
+                        (currentLocation == LocationName.Rescue && items[i].Y > pointsToMovePandas[i].Y))
+                    {
+                        if (currentLocation == LocationName.Survival) bots[i].Y -= bots[i].Speed;
+                        else items[i].Y -= items[i].Speed;
+                    }
+                    else if ((currentLocation == LocationName.Survival && bots[i].Y < wallace.Y) ||
+                        (currentLocation == LocationName.Rescue && items[i].Y < pointsToMovePandas[i].Y))
+                    {
+                        if (currentLocation == LocationName.Survival) bots[i].Y += bots[i].Speed;
+                        else items[i].Y += items[i].Speed;
+                    }
+
                     isChangedY = true;
                 }
                 else
                 {
-                    if (bots[i].X > wallace.X)
+                    if ((currentLocation == LocationName.Survival && bots[i].X > wallace.X) ||
+                        (currentLocation == LocationName.Rescue && items[i].IsRescued && items[i].X > pointsToMovePandas[i].X))
                     {
-                        bots[i].X -= bots[i].Speed;
-                        bots[i].CurrentAnimation = AnimationDirection.Left;
-                    }
-                    else if (bots[i].X < wallace.X)
-                    {
-                        bots[i].X += bots[i].Speed;
-                        bots[i].CurrentAnimation = AnimationDirection.Right;
-                    }
-                    isChangedX = true;
-                }
-                if (bots[i].Y == wallace.Y)
-                {
-
-                    if (!isChangedX)
-                    {
-                        if (bots[i].X > wallace.X)
+                        if (currentLocation == LocationName.Survival)
                         {
                             bots[i].X -= bots[i].Speed;
                             bots[i].CurrentAnimation = AnimationDirection.Left;
                         }
-                        else if (bots[i].X < wallace.X)
+                        else
+                        {
+                            items[i].X -= items[i].Speed;
+                            items[i].CurrentAnimation = AnimationDirection.Left;
+                        }
+                    }
+                    else if ((currentLocation == LocationName.Survival && bots[i].X < wallace.X) ||
+                        (currentLocation == LocationName.Rescue && items[i].IsRescued && items[i].X < pointsToMovePandas[i].X))
+                    {
+                        if (currentLocation == LocationName.Survival)
                         {
                             bots[i].X += bots[i].Speed;
                             bots[i].CurrentAnimation = AnimationDirection.Right;
+                        }
+                        else
+                        {
+                            items[i].X += items[i].Speed;
+                            items[i].CurrentAnimation = AnimationDirection.Right;
+                        }
+                    }
+                    isChangedX = true;
+                }
+                if ((currentLocation == LocationName.Survival && bots[i].Y == wallace.Y) ||
+                    (currentLocation == LocationName.Rescue && items[i].IsRescued && items[i].Y == pointsToMovePandas[i].Y))
+                {
+
+                    if (!isChangedX)
+                    {
+                        if ((currentLocation == LocationName.Survival && bots[i].X > wallace.X) ||
+                            (currentLocation == LocationName.Rescue && items[i].X > pointsToMovePandas[i].X))
+                        {
+                            if (currentLocation == LocationName.Survival)
+                            {
+                                bots[i].X -= bots[i].Speed;
+                                bots[i].CurrentAnimation = AnimationDirection.Left;
+                            }
+                            else
+                            {
+                                items[i].X -= items[i].Speed;
+                                items[i].CurrentAnimation = AnimationDirection.Left;
+                            }
+                        }
+                        else if ((currentLocation == LocationName.Survival && bots[i].X < wallace.X) ||
+                            (currentLocation == LocationName.Rescue && items[i].X < pointsToMovePandas[i].X))
+                        {
+                            if (currentLocation == LocationName.Survival)
+                            {
+                                bots[i].X += bots[i].Speed;
+                                bots[i].CurrentAnimation = AnimationDirection.Right;
+                            }
+                            else
+                            {
+                                items[i].X += items[i].Speed;
+                                items[i].CurrentAnimation = AnimationDirection.Right;
+                            }
                         }
                     }
                 }
@@ -757,10 +924,19 @@ namespace WallaceAndGromit
                 {
                     if (!isChangedY)
                     {
-                        if (bots[i].Y > wallace.Y)
-                            bots[i].Y -= bots[i].Speed;
-                        else if (bots[i].Y < wallace.Y)
-                            bots[i].Y += bots[i].Speed;
+                        if ((currentLocation == LocationName.Survival && bots[i].Y > wallace.Y) ||
+                            (currentLocation == LocationName.Rescue && items[i].IsRescued && items[i].Y > pointsToMovePandas[i].Y))
+                        {
+                            if (currentLocation == LocationName.Survival) bots[i].Y -= bots[i].Speed;
+                            else items[i].Y -= items[i].Speed;
+                        }
+                            
+                        else if ((currentLocation == LocationName.Survival && bots[i].Y < wallace.Y) ||
+                            (currentLocation == LocationName.Rescue && items[i].IsRescued && items[i].Y < pointsToMovePandas[i].Y))
+                        {
+                            if (currentLocation == LocationName.Survival) bots[i].Y += bots[i].Speed;
+                            else items[i].Y += items[i].Speed;
+                        }
                     }
                 }
             }
