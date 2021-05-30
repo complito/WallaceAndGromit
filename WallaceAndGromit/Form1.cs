@@ -59,7 +59,7 @@ namespace WallaceAndGromit
         private const int time = 40;
         private int timeLeft;
         private Map map;
-        private string pathToMusic = Path.GetFullPath("..\\..\\") + "Dee Yan-Key - ragtop.wav";
+        private string pathToMusic = Path.GetFullPath("..\\..\\") + "Dee Yan-Key - ragtop.mp3";
         private WMPLib.WindowsMediaPlayer WMP = new WMPLib.WindowsMediaPlayer();
         private Point[] pointsToMovePandas = new Point[]
         {
