@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Media;
+using System.Windows.Input;
 
 namespace WallaceAndGromit
 {
@@ -43,6 +44,7 @@ namespace WallaceAndGromit
         private bool toUpdateAnimationBot = false;
         private bool isLifeWasted = false;
         private bool isAbilityUsed = false;
+        private bool toUseE = true;
         private LocationName previousLocation = LocationName.None;
         private LocationName currentLocation = LocationName.Initial;
         private LocationName nextLocation = LocationName.None;
@@ -111,6 +113,9 @@ namespace WallaceAndGromit
         private Timer timerAnimation = new Timer { Interval = 100 };
         private Timer timerMovement = new Timer { Interval = 1 };
         private Timer timerForSearch = new Timer { Interval = 1000 };
+        private Timer timerForKeyDown = new Timer { Interval = 10 };
+        private Timer timerForKeyUp = new Timer { Interval = 10 };
+        private Timer timerToUseE = new Timer { Interval = 500 };
 
         public Form1()
         {
@@ -140,10 +145,17 @@ namespace WallaceAndGromit
             timerMovement.Tick += new EventHandler(UpdateMovement);
             timerMovement.Start();
             timerForSearch.Tick += new EventHandler(ReduceTime);
+            timerForKeyDown.Tick += new EventHandler(Keybord);
+            timerForKeyDown.Start();
+            timerToUseE.Tick += new EventHandler(UseE);
 
-            KeyDown += new KeyEventHandler(Keybord);
-            KeyUp += new KeyEventHandler(FreeKey);
             Paint += new PaintEventHandler(OnPaint);
+        }
+
+        private void UseE(object sender, EventArgs e)
+        {
+            toUseE = true;
+            timerToUseE.Stop();
         }
 
         private void ReduceTime(object sender, EventArgs e)
@@ -276,67 +288,85 @@ namespace WallaceAndGromit
             Invalidate();
         }
 
-        private void Keybord(object sender, KeyEventArgs e)
+        private void Keybord(object sender, EventArgs e)
         {
-            switch (e.KeyCode.ToString())
+            if (Keyboard.IsKeyDown(Key.A))
             {
-                case "A":
-                    wallace.CurrentAnimation = AnimationDirection.Left;
-                    break;
-                case "D":
-                    wallace.CurrentAnimation = AnimationDirection.Right;
-                    break;
-                case "W":
-                    wallace.CurrentAnimation = AnimationDirection.Up;
-                    break;
-                case "S":
-                    wallace.CurrentAnimation = AnimationDirection.Down;
-                    break;
-                case "E":
-                    if (labelToChangeLocation.Visible && nextLocation != LocationName.None)
-                    {
-                        ChangeLocation();
-                        if (currentLocation == LocationName.GamePassed) MessageBox.Show("Игра пройдена!");
-                    }
-                    else if ((currentLocation == LocationName.Search || currentLocation == LocationName.Rescue) &&
-                        labelToTakeItem.Visible)
-                    {
-                        if (currentLocation == LocationName.Search) items.Remove(items[nearItemIndex]);
-                        else items[nearItemIndex].IsRescued = true;
-                        ++numberOfCollectedItems;
-                        if (numberOfCollectedItems == itemsNumber)
-                        {
-                            if (currentLocation == LocationName.Search) isSearchPassed = true;
-                            else isRescuePassed = true;
-                            labelForTimeLeft.Visible = false;
-                        }
-                    }
-                    else if (currentLocation == LocationName.Search && !isAbilityUsed)
-                    {
-                        isAbilityUsed = true;
-                        var start = new Point(wallace.X / map.TextureWidth, wallace.Y / map.TextureHeight);
-                        var queue = new Queue<Point>();
-                        queue.Enqueue(start);
-                        var visitedPoints = new HashSet<Point>() { start };
-                        var pathsFromKeyPartsToWallace = new Dictionary<Point, SinglyLinkedList<Point>>
-                        {
-                            { start, new SinglyLinkedList<Point>(start) }
-                        };
-
-                        FindPaths(queue, map, visitedPoints, pathsFromKeyPartsToWallace);
-
-                        foreach (var item in items)
-                            if (pathsFromKeyPartsToWallace.ContainsKey(item.PointOnMap))
-                            {
-                                MarkTheWay(pathsFromKeyPartsToWallace[item.PointOnMap]);
-                                return;
-                            }
-                    }
-                    return;
-                default:
-                    return;
+                wallace.CurrentAnimation = AnimationDirection.Left;
+                isPressedAnyKey = true;
             }
-            isPressedAnyKey = true;
+            else if (Keyboard.IsKeyDown(Key.D))
+            {
+                wallace.CurrentAnimation = AnimationDirection.Right;
+                isPressedAnyKey = true;
+            }
+                
+            else if (Keyboard.IsKeyDown(Key.W))
+            {
+                wallace.CurrentAnimation = AnimationDirection.Up;
+                isPressedAnyKey = true;
+            }
+                
+            else if (Keyboard.IsKeyDown(Key.S))
+            {
+                wallace.CurrentAnimation = AnimationDirection.Down;
+                isPressedAnyKey = true;
+            }
+                
+            else if (Keyboard.IsKeyDown(Key.E) && toUseE)
+            {
+                if (labelToChangeLocation.Visible && nextLocation != LocationName.None)
+                {
+                    toUseE = false;
+                    timerToUseE.Start();
+                    ChangeLocation();
+                    if (currentLocation == LocationName.GamePassed) MessageBox.Show("Игра пройдена!");
+                }
+                else if ((currentLocation == LocationName.Search || currentLocation == LocationName.Rescue) &&
+                    labelToTakeItem.Visible)
+                {
+                    toUseE = false;
+                    timerToUseE.Start();
+                    if (currentLocation == LocationName.Search) items.Remove(items[nearItemIndex]);
+                    else items[nearItemIndex].IsRescued = true;
+                    ++numberOfCollectedItems;
+                    if (numberOfCollectedItems == itemsNumber)
+                    {
+                        if (currentLocation == LocationName.Search) isSearchPassed = true;
+                        else isRescuePassed = true;
+                        labelForTimeLeft.Visible = false;
+                    }
+                }
+                else if (currentLocation == LocationName.Search && !isAbilityUsed)
+                {
+                    toUseE = false;
+                    timerToUseE.Start();
+                    isAbilityUsed = true;
+                    var start = new Point(wallace.X / map.TextureWidth, wallace.Y / map.TextureHeight);
+                    var queue = new Queue<Point>();
+                    queue.Enqueue(start);
+                    var visitedPoints = new HashSet<Point>() { start };
+                    var pathsFromKeyPartsToWallace = new Dictionary<Point, SinglyLinkedList<Point>>
+                    {
+                        { start, new SinglyLinkedList<Point>(start) }
+                    };
+
+                    FindPaths(queue, map, visitedPoints, pathsFromKeyPartsToWallace);
+
+                    foreach (var item in items)
+                        if (pathsFromKeyPartsToWallace.ContainsKey(item.PointOnMap))
+                        {
+                            MarkTheWay(pathsFromKeyPartsToWallace[item.PointOnMap]);
+                            return;
+                        }
+                }
+                return;
+            }
+            else
+            {
+                if (isPressedAnyKey) FreeKey();
+                return;
+            }
         }
 
         private void MarkTheWay(SinglyLinkedList<Point> pathsFromKeyPartsToWallace)
@@ -373,7 +403,7 @@ namespace WallaceAndGromit
             }
         }
 
-        private void FreeKey(object sender, KeyEventArgs e)
+        private void FreeKey()
         {
             isPressedAnyKey = false;
             wallace.CurrentFrame = 0;
