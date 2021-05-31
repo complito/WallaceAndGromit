@@ -599,7 +599,7 @@ namespace WallaceAndGromit
                 else if (wallace.X + wallace.Size.Width > map.TextureWidth * (map.MapLayout.GetLength(0) - 1) - labelRange && // right
                     wallace.Y + wallace.Size.Height / 2 > map.TextureHeight * 4 &&
                     wallace.Y + wallace.Size.Height / 2 < map.TextureHeight * 6 &&
-                    isRescuePassed)
+                    isRescuePassed && isSearchPassed && isSurvivalPassed)
                     nextLocation = LocationName.GamePassed;
                 else
                 {

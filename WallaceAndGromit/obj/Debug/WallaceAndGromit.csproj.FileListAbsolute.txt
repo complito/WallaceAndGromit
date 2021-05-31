@@ -9,3 +9,4 @@ D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.Form1.resources
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\Interop.WMPLib.dll
 D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.csproj.ResolveComReference.cache
+D:\УрФУ\ЯТП\WallaceAndGromit\WallaceAndGromit\obj\Debug\WallaceAndGromit.csproj.AssemblyReference.cache
